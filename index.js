@@ -1,15 +1,19 @@
 import { Hono } from 'hono'
+import { authMiddleware } from './auth/auth'
 import { homeApp } from './apps/home/app'
-import { fibFinderApp } from './apps/fibfinder/app'
 import { authApp } from './auth/app'
+import { fibFinderApp } from './apps/fibfinder/app'
 
 const app = new Hono()
 
+app.use('*', authMiddleware)
+
 app.route('/', homeApp)
+
+app.route('/', authApp) //login and //signup
 
 app.route('/', fibFinderApp) //fibfinder
 
-app.route('/', authApp) //login and //signup
 
 export default {
   port: process.env.PORT || 3000,

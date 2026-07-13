@@ -74,3 +74,20 @@ export const getSessionUser = function (sessionId) {
 
   return safeUser
 }
+
+export const authMiddleware = async function (c, next) {
+  const sessionId = getCookie(c, 'session_id')
+  const user = sessionId ? getSessionUser(sessionId) : null
+  c.set('user', user)
+
+  await next()
+}
+
+export const requireAuth = async function (c, next) {
+  const user = c.get('user')
+  if (!user) {
+    return c.redirect('/login')
+  }
+
+  await next()
+}
