@@ -1,0 +1,14 @@
+{
+  "name": "sencho",
+  "module": "index.js",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --hot index.js",
+    "start": "bun index.js",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "hono": "^4.12.29"
+  }
+}
