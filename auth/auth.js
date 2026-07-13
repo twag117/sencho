@@ -3,6 +3,7 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie"
 
 const db = new Database(new URL("./auth.db", import.meta.url).pathname)
 db.run("PRAGMA journal_mode = WAL;")
+
 db.run(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,9 +50,27 @@ export const login = async function(email, password) {
   return safeUser
 }
 
-export const createSession = function (userId) {
+export const createSession = function (c, userId) {
   const sessionId = crypto.randomUUID()
-  db.query(`INSERT INTO sessions (id, user_id) VALUES(?, ?)`).run(sessionId, userId)
+  const insertSession = db.query(`INSERT INTO sessions (id, user_id) VALUES(?, ?) RETURNING * `).get(sessionId, userId)
+  if (!insertSession) {
+    return null
+  }
+  setCookie(c, 'session_id', sessionId, { path: '/', httpOnly: true, maxAge: 7776000})
   
   return sessionId
+}
+
+export const getSessionUser = function (sessionId) {
+  const session = db.query(`SELECT * FROM sessions WHERE id = ?`).get(sessionId)
+  if (!session) {
+    return null
+  }
+  if (session.expires_at < Math.floor(Date.now() / 1000)) {
+    return null
+  }
+  const getUser = db.query(`SELECT * FROM users WHERE id = ?`).get(session.user_id)
+  const { password_hash, ...safeUser } = getUser
+
+  return safeUser
 }

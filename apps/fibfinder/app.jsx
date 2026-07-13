@@ -4,7 +4,7 @@ import { Layout } from "../../shared/layout"
 
 export const fibFinderApp = new Hono()
 
-fibFinderApp.get('/', (c) => {
+fibFinderApp.get('/fibfinder', (c) => {
   return c.html(
     <Layout title="Fib Finder">
       <h1>Fib Finder</h1>
