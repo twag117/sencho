@@ -22,7 +22,7 @@ db.run(`
   )
 `)
 
-export const signup = async function(email, password) {
+export async function signup(email, password) {
   const userEmail = email.trim().toLowerCase()
   const checkEmail = db.query(`SELECT * FROM users WHERE email=?`)
   if (checkEmail.get(userEmail)) {
@@ -35,7 +35,7 @@ export const signup = async function(email, password) {
   return safeUser
 }
 
-export const login = async function(email, password) {
+export async function login(email, password) {
   const userEmail = email.trim().toLowerCase()
   const getUser = db.query(`SELECT * FROM users WHERE email=?`).get(userEmail)
   if (!getUser) {
@@ -50,7 +50,7 @@ export const login = async function(email, password) {
   return safeUser
 }
 
-export const createSession = function (c, userId) {
+export function createSession(c, userId) {
   const sessionId = crypto.randomUUID()
   const insertSession = db.query(`INSERT INTO sessions (id, user_id) VALUES(?, ?) RETURNING * `).get(sessionId, userId)
   if (!insertSession) {
@@ -61,7 +61,7 @@ export const createSession = function (c, userId) {
   return sessionId
 }
 
-export const getSessionUser = function (sessionId) {
+export function getSessionUser(sessionId) {
   const session = db.query(`SELECT * FROM sessions WHERE id = ?`).get(sessionId)
   if (!session) {
     return null
@@ -75,7 +75,7 @@ export const getSessionUser = function (sessionId) {
   return safeUser
 }
 
-export const authMiddleware = async function (c, next) {
+export async function authMiddleware(c, next) {
   const sessionId = getCookie(c, 'session_id')
   const user = sessionId ? getSessionUser(sessionId) : null
   c.set('user', user)
@@ -83,7 +83,7 @@ export const authMiddleware = async function (c, next) {
   await next()
 }
 
-export const requireAuth = async function (c, next) {
+export async function requireAuth(c, next) {
   const user = c.get('user')
   if (!user) {
     return c.redirect('/login')
