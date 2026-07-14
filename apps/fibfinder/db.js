@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite"
 
 const db = new Database(new URL("./fibfinder.db", import.meta.url).pathname)
-db.run("PRAGMA journal_mode = WAL;")
+db.run("PRAGMA journal_mode = DELETE;") //db.run("PRAGMA journal_mode = WAL;")
 
 db.run(`
   CREATE TABLE IF NOT EXISTS puzzles (
