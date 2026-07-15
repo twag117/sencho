@@ -12,7 +12,7 @@ fibFinderApp.get('/fibfinder', (c) => {
   const puzzleIndex = puzzleIndexForDate(today, PUZZLE_START_DATE, puzzleCount)
   const puzzle = getTodaysPuzzle(today, puzzleIndex)
   const statements = JSON.parse(puzzle.statements)
-  const attempts = getAttempts(LOST)
+  const attempts = getAttempts(c.get('user_id'), c.get('guest_id'), c.get('display_name'), puzzle.id, today)
 
   return c.html(
     <Layout title="Fib Finder">
@@ -32,7 +32,11 @@ fibFinderApp.get('/fibfinder', (c) => {
         <strong>Created At:</strong> {puzzle.created_at}<br/>
       </div>
       <div>
-        {statements.map((text, i) => <a href="" role='button' key={i}>{text}</a>)}
+        {statements.map((text, i) => (
+          <form method="post" action={`/fibfinder/${puzzle.id}/guess/${i}`} key={i}>
+            <button type="submit">{text}</button>
+          </form>
+        ))}
       </div>
     </Layout>
   )
