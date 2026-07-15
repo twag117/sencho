@@ -1,16 +1,18 @@
 /** @jsxImportSource hono/jsx */
 import { Hono } from "hono"
 import { Layout } from "../../shared/layout"
-import { getCentralDateString, PUZZLE_START_DATE, puzzleIndexForDate } from "./game"
-import { getRegularPuzzleCount, getTodaysPuzzle } from "./db"
+import { getCentralDateString, isCorrectGuess, PUZZLE_START_DATE, puzzleIndexForDate } from "./game"
+import { getPuzzleById, getRegularPuzzleCount, getTodaysPuzzle } from "./db"
 
 export const fibFinderApp = new Hono()
 
 fibFinderApp.get('/fibfinder', (c) => {
-  const today = '2026-12-25'//getCentralDateString()
+  const today = getCentralDateString()
   const puzzleCount = getRegularPuzzleCount()
   const puzzleIndex = puzzleIndexForDate(today, PUZZLE_START_DATE, puzzleCount)
   const puzzle = getTodaysPuzzle(today, puzzleIndex)
+  const statements = JSON.parse(puzzle.statements)
+  const attempts = getAttempts(LOST)
 
   return c.html(
     <Layout title="Fib Finder">
@@ -29,6 +31,19 @@ fibFinderApp.get('/fibfinder', (c) => {
         <strong>Fib Explanation:</strong> {puzzle.fib_explanation}<br/>
         <strong>Created At:</strong> {puzzle.created_at}<br/>
       </div>
+      <div>
+        {statements.map((text, i) => <a href="" role='button' key={i}>{text}</a>)}
+      </div>
     </Layout>
   )
+})
+
+fibFinderApp.post('/fibfinder/{id}/guess/{index}', (c) => {
+  const puzzleId = c.param('id')
+  const guessIndex = c.param('index')
+  const puzzle = getPuzzleById(puzzleId)
+  const guess = isCorrectGuess(puzzle, guessIndex)
+  
+
+  return guess
 })

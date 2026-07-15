@@ -65,3 +65,40 @@ export function getTodaysPuzzle(dateStr, puzzleIndex) {
     LIMIT 1 OFFSET ?
   `).get(puzzleIndex)
 }
+
+export function getPuzzleById(puzzleId) {
+  return db.query(`SELECT * FROM puzzles WHERE id = ?;`).get(puzzleId)
+}
+
+export function getAttempts(userId, guestId, displayName, puzzleId, puzzleDate) {
+  const identityCol = userId ? 'user_id' : 'guest_id'
+  const identityVal = userId ? userId : guestId
+
+  const existing = db.query(`
+    SELECT * FROM attempts WHERE ${identityCol} = ? AND puzzle_date = ?
+  `).get(identityVal, puzzleDate)
+
+  if (existing) {
+    return existing
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000)
+
+  return db.query(`
+    INSERT INTO attempts
+      (user_id, guest_id, display_name, puzzle_id, puzzle_date, modified_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+    RETURNING *
+  `).get(userId ?? null, guestId ?? null, displayName, puzzleId, puzzleDate, nowSeconds)
+}
+
+export function insertGuess(puzzleId) {
+  db.query(`
+    INSERT INTO attempts
+      (
+        user_id, guest_id, display_name,
+        puzzle_id, puzzle_date, guesses,
+        status, score, completed_at, modified_at
+      )
+  `).run()
+} 
