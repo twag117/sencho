@@ -53,7 +53,6 @@ fibFinderApp.get('/fibfinder', (c) => {
         <button onclick={`navigator.clipboard.writeText(${JSON.stringify(shareText)}); this.textContent = 'Copied!'`}>
           Copy Score
         </button>
-        <p><small>Copy needs HTTPS — works on your real domain, not plain http://.</small></p>
         <p>Come back tomorrow for a new one.</p>
       </Layout>
     )

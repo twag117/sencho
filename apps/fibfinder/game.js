@@ -1,4 +1,4 @@
-export const PUZZLE_START_DATE = '2026-07-15'
+export const PUZZLE_START_DATE = '2026-07-16'
 
 export function getCentralDateString(date = new Date()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(date)
