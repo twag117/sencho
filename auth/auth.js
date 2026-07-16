@@ -75,6 +75,10 @@ export function getSessionUser(sessionId) {
   return safeUser
 }
 
+export function logout(c) {
+  deleteCookie(c, 'session_id')
+}
+
 export async function authMiddleware(c, next) {
   const sessionId = getCookie(c, 'session_id')
   const user = sessionId ? getSessionUser(sessionId) : null

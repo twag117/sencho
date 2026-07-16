@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite"
 
 const db = new Database(new URL("./fibfinder.db", import.meta.url).pathname)
-db.run("PRAGMA journal_mode = DELETE;") //db.run("PRAGMA journal_mode = WAL;")
+db.run("PRAGMA journal_mode = WAL;")
 
 db.run(`
   CREATE TABLE IF NOT EXISTS puzzles (
@@ -12,8 +12,7 @@ db.run(`
     fib_index INTEGER NOT NULL,
     fib_explanation TEXT NOT NULL,
     created_at INTEGER DEFAULT (unixepoch())
-  )
-  ;
+  );
 `)
 
 db.run(`
@@ -30,22 +29,19 @@ db.run(`
     completed_at INTEGER,
     modified_at INTEGER NOT NULL,
     created_at INTEGER DEFAULT (unixepoch())
-  )
-  ;
+  );
 `)
 
 db.run(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_attempts_user_day
     ON attempts(user_id, puzzle_date)
-    WHERE user_id IS NOT NULL
-  ;
+    WHERE user_id IS NOT NULL;
 `)
 
 db.run(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_attempts_guest_day
     ON attempts(guest_id, puzzle_date)
-    WHERE guest_id IS NOT NULL
-  ;
+    WHERE guest_id IS NOT NULL;
 `)
 
 export function getRegularPuzzleCount() {
@@ -67,7 +63,7 @@ export function getTodaysPuzzle(dateStr, puzzleIndex) {
 }
 
 export function getPuzzleById(puzzleId) {
-  return db.query(`SELECT * FROM puzzles WHERE id = ?;`).get(puzzleId)
+  return db.query(`SELECT * FROM puzzles WHERE id = ?`).get(puzzleId)
 }
 
 export function getAttempts(userId, guestId, displayName, puzzleId, puzzleDate) {
@@ -92,13 +88,27 @@ export function getAttempts(userId, guestId, displayName, puzzleId, puzzleDate) 
   `).get(userId ?? null, guestId ?? null, displayName, puzzleId, puzzleDate, nowSeconds)
 }
 
-export function insertGuess(puzzleId) {
-  db.query(`
-    INSERT INTO attempts
-      (
-        user_id, guest_id, display_name,
-        puzzle_id, puzzle_date, guesses,
-        status, score, completed_at, modified_at
-      )
-  `).run()
-} 
+export function recordGuess(attemptId, correct, score) {
+  const nowSeconds = Math.floor(Date.now() / 1000)
+
+  if (correct) {
+    return db.query(`
+      UPDATE attempts
+      SET guesses = guesses + 1,
+          status = 'completed',
+          score = ?,
+          completed_at = ?,
+          modified_at = ?
+      WHERE id = ?
+      RETURNING *
+    `).get(score, nowSeconds, nowSeconds, attemptId)
+  }
+
+  return db.query(`
+    UPDATE attempts
+    SET guesses = guesses + 1,
+        modified_at = ?
+    WHERE id = ?
+    RETURNING *
+  `).get(nowSeconds, attemptId)
+}

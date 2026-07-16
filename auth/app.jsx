@@ -1,17 +1,17 @@
 /** @jsxImportSource hono/jsx */
 import { Hono } from "hono"
-import { Layout } from "../shared/layout"
-import { login, signup, createSession } from "./auth"
+import { Layout } from "../shared/layout.jsx"
+import { login, signup, createSession, logout } from "./auth.js"
 
 export const authApp = new Hono()
 
 authApp.get('/login', (c) => {
   return c.html(
-    <Layout title="Login">
+    <Layout title="Login" user={c.get('user')}>
       <form action="/login" method="post">
-        <label for="u_email"><strong>Username</strong></label>
-        <input type="text" placeholder="Enter Email" name="u_email" required />
-        <label for="u_psw"><strong>Password</strong></label>
+        <label htmlFor="u_email"><strong>Email</strong></label>
+        <input type="email" placeholder="Enter Email" name="u_email" required />
+        <label htmlFor="u_psw"><strong>Password</strong></label>
         <input type="password" placeholder="Enter Password" name="u_psw" required />
         <button type="submit">Login</button>
       </form>
@@ -38,13 +38,13 @@ authApp.post('/login', async (c) => {
 
 authApp.get('/signup', (c) => {
   return c.html(
-    <Layout title="Signup">
+    <Layout title="Signup" user={c.get('user')}>
       <form action="/signup" method="post">
-        <label for="u_email"><strong>Username</strong></label>
-        <input type="text" placeholder="Enter Email" name="u_email" required />
-        <label for="u_psw"><strong>Password</strong></label>
+        <label htmlFor="u_email"><strong>Email</strong></label>
+        <input type="email" placeholder="Enter Email" name="u_email" required />
+        <label htmlFor="u_psw"><strong>Password</strong></label>
         <input type="password" placeholder="Enter Password" name="u_psw" id="pass1" required />
-        <label for="u_psw_confirmation"><strong>Confirm Password</strong></label>
+        <label htmlFor="u_psw_confirmation"><strong>Confirm Password</strong></label>
         <input type="password" placeholder="Confirm Password" name="u_psw_confirmation" id="pass2" required />
         <button type="submit" id="submit-form">Sign-Up</button>
       </form>
@@ -52,7 +52,7 @@ authApp.get('/signup', (c) => {
   )
 })
 
-authApp.post('/signup', async (c)=> {
+authApp.post('/signup', async (c) => {
   const form = await c.req.formData()
   const formEmail = form.get('u_email')
   const formPassword = form.get('u_psw')
@@ -70,5 +70,10 @@ authApp.post('/signup', async (c)=> {
     return c.redirect('/signup?error=3')
   }
 
+  return c.redirect('/')
+})
+
+authApp.get('/logout', (c) => {
+  logout(c)
   return c.redirect('/')
 })
