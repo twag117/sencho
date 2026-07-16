@@ -29,5 +29,5 @@ export function buildShareText({ puzzleNumber, guesses, elapsedSeconds, score })
   const wrongMarks = '❌'.repeat(Math.max(0, guesses - 1))
   const emojiRow = wrongMarks + '✅'
   const guessWord = guesses === 1 ? 'guess' : 'guesses'
-  return `Fib Finder #${puzzleNumber}\n${emojiRow}\n${guesses} ${guessWord} · ${elapsedSeconds}s · ${score} pts`
+  return `Fib Finder #${puzzleNumber}\n${emojiRow}\n${guesses} ${guessWord} · ${elapsedSeconds}s · ${score} pts\n\nhttps://sencho.app`
 }
