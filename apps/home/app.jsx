@@ -10,8 +10,9 @@ homeApp.get('/', (c) => {
   return c.html(
     <Layout title="Sencho" user={user}>
       <h1>Senchō</h1>
-      <p>A small collection of games.</p>
+      <p>A small collection of games/apps.</p>
       <a href="/fibfinder" role="button">Fib Finder</a>
+      <a href="/qr" role="button">QR Code Generator</a>
     </Layout>
   )
 })
