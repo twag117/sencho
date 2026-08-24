@@ -11,7 +11,7 @@ export const Layout = ({ title = 'Sencho', user, children }) => (
         rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230172ad'/><text x='52' y='78' font-size='100' text-anchor='middle' fill='white' font-family='serif'>ō</text></svg>"
       />
-      <link rel="stylesheet" href="/css/pico.css" />
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
       <style>
         {`
           nav {
@@ -28,8 +28,8 @@ export const Layout = ({ title = 'Sencho', user, children }) => (
         <ul>
           <li><a href="/fibfinder">Fib Finder</a></li>
           {user
-            ? <li><a href="/logout">Log out ({user.email})</a></li>
-            : <li><a href="/login">Log in</a> / <a href="/signup">Sign up</a></li>
+            ? <li>({user.email})</li>
+            : <li><a href="/auth/login">Log in</a></li>
           }
         </ul>
       </nav>

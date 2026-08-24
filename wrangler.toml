@@ -1,0 +1,8 @@
+name = "sencho"
+main = "index.js"
+compatibility_date = "2024-09-23"
+
+[vars]
+SUPABASE_URL = "https://kqmccabpmaoqnihjnaya.supabase.co"
+
+SITE_URL = "http://localhost:8787"

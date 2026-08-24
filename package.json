@@ -9,7 +9,11 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
     "hono": "^4.12.29",
     "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "wrangler": "^4.125.0"
   }
 }

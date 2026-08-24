@@ -36,4 +36,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Database stuff
 *.db
 *.db-shm
-*.db-wal
+*.db-wal.dev.vars
+
+# Environment variable files
+.dev.vars

@@ -1,88 +1,32 @@
-import { Database } from "bun:sqlite"
+import { getSupabase } from "../shared/supabaseClient"
 import { getCookie, setCookie, deleteCookie } from "hono/cookie"
 
-const db = new Database(new URL("./auth.db", import.meta.url).pathname)
-db.run("PRAGMA journal_mode = WAL;")
+export async function loginWithMagicLink(email, env) {
+  const supabase = getSupabase(env)
+  const { error } = await supabase.auth.signInWithOtp({
+    email: email.trim().toLowerCase(),
+    options: {
+      emailRedirectTo: `${env.SITE_URL || 'http://localhost:3000'}/auth/callback`,
+    },
+  })
 
-db.run(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    created_at INTEGER DEFAULT (unixepoch()),
-    role TEXT DEFAULT 'user'
-  )
-`)
-
-db.run(`
-  CREATE TABLE IF NOT EXISTS sessions (
-    id TEXT PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    expires_at INTEGER DEFAULT (unixepoch()+7776000)
-  )
-`)
-
-export async function signup(email, password) {
-  const userEmail = email.trim().toLowerCase()
-  const checkEmail = db.query(`SELECT * FROM users WHERE email=?`)
-  if (checkEmail.get(userEmail)) {
+  if (error) {
+    console.error("Supabase Auth Error:", error.message)
     return null
   }
-  const hashedPass = await Bun.password.hash(password)
-  const newUser = db.query(`INSERT INTO users (email, password_hash) VALUES (?, ?) RETURNING * `).get(userEmail, hashedPass)
-  const { password_hash, ...safeUser } = newUser
-
-  return safeUser
-}
-
-export async function login(email, password) {
-  const userEmail = email.trim().toLowerCase()
-  const getUser = db.query(`SELECT * FROM users WHERE email=?`).get(userEmail)
-  if (!getUser) {
-    return null
-  }
-  const verifyPass = await Bun.password.verify(password, getUser.password_hash)
-  if (!verifyPass) {
-    return null
-  }
-  const { password_hash, ...safeUser } = getUser
-
-  return safeUser
-}
-
-export function createSession(c, userId) {
-  const sessionId = crypto.randomUUID()
-  const insertSession = db.query(`INSERT INTO sessions (id, user_id) VALUES(?, ?) RETURNING * `).get(sessionId, userId)
-  if (!insertSession) {
-    return null
-  }
-  setCookie(c, 'session_id', sessionId, { path: '/', httpOnly: true, maxAge: 7776000})
-  
-  return sessionId
-}
-
-export function getSessionUser(sessionId) {
-  const session = db.query(`SELECT * FROM sessions WHERE id = ?`).get(sessionId)
-  if (!session) {
-    return null
-  }
-  if (session.expires_at < Math.floor(Date.now() / 1000)) {
-    return null
-  }
-  const getUser = db.query(`SELECT * FROM users WHERE id = ?`).get(session.user_id)
-  const { password_hash, ...safeUser } = getUser
-
-  return safeUser
-}
-
-export function logout(c) {
-  deleteCookie(c, 'session_id')
+  return true
 }
 
 export async function authMiddleware(c, next) {
-  const sessionId = getCookie(c, 'session_id')
-  const user = sessionId ? getSessionUser(sessionId) : null
-  c.set('user', user)
+  const accessToken = getCookie(c, 'sb-access-token')
+
+  if (accessToken) {
+    const supabase = getSupabase(c.env)
+    const { data, error } = await supabase.auth.getUser(accessToken)
+    c.set('user', error ? null : data.user)
+  } else {
+    c.set('user', null)
+  }
 
   await next()
 }
@@ -90,8 +34,13 @@ export async function authMiddleware(c, next) {
 export async function requireAuth(c, next) {
   const user = c.get('user')
   if (!user) {
-    return c.redirect('/login')
+    return c.redirect('/auth/login')
   }
-
   await next()
+}
+
+export async function logout(c) {
+  const supabase = getSupabase(c.env)
+  await supabase.auth.signOut()
+  deleteCookie(c, 'sb-access-token')
 }
