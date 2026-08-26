@@ -5,14 +5,14 @@ export const homeApp = new Hono()
 
 homeApp.get('/', async (c) => {
   return c.html(
-    <Layout title="Sencho Home">
+    <Layout title="Sencho Home" user={c.get('user')}>
       <h1 className="text-4xl font-bold mb-4">Welcome to Sencho.app 🦆</h1>
-      <p>Pick a silly project to start:</p>
-      <ul className="mt-4 space-y-2">
-        <li><a href="/fibfinder" className="text-blue-500 underline">FibFinder</a></li>
-        <li><a href="/flashespanol" className="text-blue-500 underline">FlashEspanol</a></li>
-        <li><a href="/qr" className="text-blue-500 underline">QR Code Generator</a></li>
-      </ul>
+      <p>Choose an app below:</p>
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem;">
+        <a href="/fibfinder" className="card-link">FibFinder</a>
+        <a href="/flashespanol" className="card-link">FlashEspanol</a>
+        <a href="/qr" className="card-link">QR Code Generator</a>
+      </div>
     </Layout>
   )
 })

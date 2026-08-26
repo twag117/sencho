@@ -11,10 +11,10 @@ qrCodeGeneratorApp.get('/', async (c) => {
     const svg = await QRCode.toString(url, { type: 'svg' })
 
     return c.html(
-      <Layout title="QR Code Generator">
+      <Layout title="QR Code Generator" user={c.get('user')}>
         <h1>QR Code Generator</h1>
         <p>Free QR Code Generator</p>
-        <div dangerouslySetInnerHTML={{ __html: svg }} />
+        <div dangerouslySetInnerHTML={{ __html: svg }} style="max-width: 250px; margin: 1rem 0;" />
         <form method="get" action="/qr">
           <input type="text" name="url" value={url} placeholder="URL" />
           <button type="submit">Generate!</button>
@@ -24,7 +24,7 @@ qrCodeGeneratorApp.get('/', async (c) => {
   }
 
   return c.html(
-    <Layout title="QR Code Generator">
+    <Layout title="QR Code Generator" user={c.get('user')}>
       <h1>QR Code Generator</h1>
       <p>Free QR Code Generator</p>
       <form method="get" action="/qr">

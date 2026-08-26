@@ -97,16 +97,16 @@ fibFinderApp.get('/', async (c) => {
     })
 
     return c.html(
-      <Layout title="Fib Finder">
+      <Layout title="Fib Finder" user={user}>
         <h1 className="text-3xl font-bold">Fib Finder</h1>
         <p>Solved! The fib was:</p>
         <blockquote className="p-4 bg-gray-200 rounded my-2">{statements[puzzle.fib_index]}</blockquote>
         <p className="italic">{puzzle.fib_explanation}</p>
         <p className="mt-4">{attempt.guesses} guesses · {elapsedSeconds}s · {attempt.score} pts</p>
-        <textarea readOnly rows="5" className="w-full p-2 border">{shareText}</textarea>
+        <textarea readOnly rows={5} className="w-full p-2 border">{shareText}</textarea>
         <button 
           className="mt-2 bg-blue-500 text-white p-2 rounded"
-          onClick={`navigator.clipboard.writeText(${JSON.stringify(shareText)}); this.textContent = 'Copied!'`}
+          onclick={`navigator.clipboard.writeText(${JSON.stringify(shareText)}); this.textContent = 'Copied!'`}
         >
           Copy Score
         </button>
@@ -116,7 +116,7 @@ fibFinderApp.get('/', async (c) => {
   }
 
   return c.html(
-    <Layout title="Fib Finder">
+    <Layout title="Fib Finder" user={user}>
       <h1 className="text-3xl font-bold">Fib Finder</h1>
       <p>{puzzle.category} — find the fib.</p>
       {attempt?.guesses > 0 && <p>{attempt.guesses} wrong guess{attempt.guesses === 1 ? '' : 'es'} so far — try again.</p>}

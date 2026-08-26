@@ -6,16 +6,16 @@ export const flashEspanolApp = new Hono()
 
 // --- PAGES ---
 
-const HomePage = () => (
-  <Layout title="Home">
+const HomePage = ({ user }: { user: any }) => (
+  <Layout title="Home" user={user}>
     <h1 className="text-3xl font-bold">Welcome to Flash Español!</h1>
     <p>Click the button below to get started :)</p>
     <a href="/flashespanol/words/1" className="mt-4 inline-block bg-blue-500 text-white p-2 rounded">Start</a>
   </Layout>
 )
 
-const WordsPage = ({ words }: { words: any[] }) => (
-  <Layout title="Words">
+const WordsPage = ({ words, user }: { words: any[]; user: any }) => (
+  <Layout title="Words" user={user}>
     <h1 className="text-3xl font-bold">All Words</h1>
     <ul className="mt-4 space-y-1">
       {words.map((word) => (
@@ -27,39 +27,40 @@ const WordsPage = ({ words }: { words: any[] }) => (
   </Layout>
 )
 
-const WordPage = ({ word }: { word: any }) => (
-  <Layout title={word.es}>
-    <div className="max-w-md mx-auto bg-white p-6 rounded shadow">
-      <h1 className="text-4xl font-bold">{word.es}</h1>
-      <p className="text-gray-500 italic mb-4">{word.pronunciation}</p>
+const WordPage = ({ word, user }: { word: any; user: any }) => (
+  <Layout title={word.es} user={user}>
+    <div className="word-card">
+      <h1 style="font-size: 2.5rem; font-weight: 600;">{word.es}</h1>
+      <p style="color: var(--muted-color); font-style: italic;">{word.pronunciation}</p>
       <img
-        className="w-full rounded mb-4"
+        className="word-image"
         src={word.image_url || "https://placehold.co/400x300?text=No+image"}
         alt={word.es}
       />
       <a 
         href={word.id === 500 ? "/flashespanol/words/1" : `/flashespanol/words/${word.id + 1}`} 
-        className="block text-center bg-blue-500 text-white p-2 rounded mb-4"
+        style="display: block; text-align: center; background: #0172ad; color: white; padding: 0.6rem 2rem; border-radius: 6px; text-decoration: none;"
       >
         Next
       </a>
-      <form action={`/flashespanol/words/${word.id}/image`} method="post" className="border-t pt-4">
-        <label className="block text-sm font-medium">Image URL:</label>
-        <input type="text" name="image_url" className="w-full p-2 border rounded mb-2" />
-        <button type="submit" className="bg-gray-800 text-white p-2 rounded w-full">Submit</button>
-      </form>
+      {user && (
+        <form action={`/flashespanol/words/${word.id}/image`} method="post" className="form-container" style="border-top: 1px solid #ddd; padding-top: 1rem; width: 100%;">
+          <input type="text" name="image_url" placeholder="Image URL" style="flex: 1; padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px;" />
+          <button type="submit" style="background: #333; color: white; padding: 0.6rem 1rem; border-radius: 6px; border: none;">Submit</button>
+        </form>
+      )}
     </div>
   </Layout>
 )
 
 // --- ROUTES ---
 
-flashEspanolApp.get('/', (c) => c.html(<HomePage />))
+flashEspanolApp.get('/', (c) => c.html(<HomePage user={c.get('user')} />))
 
 flashEspanolApp.get('/words', async (c) => {
   const supabase = getSupabase(c.env)
   const { data: words } = await supabase.from('words').select('*').limit(1000)
-  return c.html(<WordsPage words={words || []} />)
+  return c.html(<WordsPage words={words || []} user={c.get('user')} />)
 })
 
 flashEspanolApp.get('/words/:id', async (c) => {
@@ -68,13 +69,16 @@ flashEspanolApp.get('/words/:id', async (c) => {
   const { data: word } = await supabase.from('words').select('*').eq('id', id).single()
   
   if (word) {
-    return c.html(<WordPage word={word} />)
+    return c.html(<WordPage word={word} user={c.get('user')} />)
   } else {
     return c.text("Word not found", 404)
   }
 })
 
 flashEspanolApp.post('/words/:id/image', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.text('Unauthorized', 401)
+
   const id = c.req.param('id')
   const body = await c.req.parseBody()
   const supabase = getSupabase(c.env)
