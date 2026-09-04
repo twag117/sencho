@@ -3,7 +3,7 @@ main = "index.tsx"
 compatibility_date = "2024-08-25"
 
 [vars]
-SITE_URL = "https://sencho.twag117.workers.dev"
+SITE_URL = "https://sencho.app"
 
 [[d1_databases]]
 binding = "USERS_DB"
