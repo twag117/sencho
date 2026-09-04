@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { getCookie, setCookie } from 'hono/cookie'
 import { Layout } from '../shared/layout'
-import { getSupabase } from '../shared/supabase'
 
 // --- GAME LOGIC ---
 const PUZZLE_START_DATE = '2026-07-16'
@@ -9,7 +8,7 @@ const POINTS_PER_EXTRA_GUESS = 100
 const POINTS_PER_EXTRA_SECOND = 2
 const FREE_SECONDS = 5
 
-const getCentralDateString = (date = new Date()) => 
+const getCentralDateString = (date = new Date()) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(date)
 
 const puzzleIndexForDate = (dateStr: string, startDateStr = PUZZLE_START_DATE, totalPuzzles: number) => {
@@ -52,43 +51,44 @@ export const fibFinderApp = new Hono()
 
 fibFinderApp.get('/', async (c) => {
   const user = c.get('user')
-  const supabase = getSupabase(c.env)
+  const db = c.env.FIBFINDER_DB
   const today = getCentralDateString()
-  
-  const { count } = await supabase.from('puzzles').select('*', { count: 'exact', head: true })
-  const puzzleIndex = puzzleIndexForDate(today, PUZZLE_START_DATE, count || 0)
 
-  let { data: puzzle } = await supabase.from('puzzles').select('*').eq('special_date', today).single()
+  const countRow = await db.prepare(`SELECT COUNT(*) as count FROM puzzles WHERE special_date IS NULL`).first()
+  const puzzleIndex = puzzleIndexForDate(today, PUZZLE_START_DATE, countRow?.count || 0)
+
+  let puzzle = await db.prepare(`SELECT * FROM puzzles WHERE special_date = ?`).bind(today).first()
   if (!puzzle) {
-    const { data: list } = await supabase.from('puzzles').select('*').is('special_date', null).order('id').range(puzzleIndex, puzzleIndex)
-    puzzle = list?.[0]
+    puzzle = await db.prepare(
+      `SELECT * FROM puzzles WHERE special_date IS NULL ORDER BY id LIMIT 1 OFFSET ?`
+    ).bind(puzzleIndex).first()
   }
 
   if (!puzzle) return c.text("No puzzle found for today!", 404)
 
-  const statements = puzzle.statements 
+  const statements = JSON.parse(puzzle.statements as string)
   const { userId, guestId, displayName } = getIdentity(c)
   const identityCol = userId ? 'user_id' : 'guest_id'
   const identityVal = userId ? userId : guestId
-  
-  let { data: attempt } = await supabase.from('attempts').select('*').eq(identityCol, identityVal).eq('puzzle_date', today).single()
+
+  let attempt = await db.prepare(
+    `SELECT * FROM attempts WHERE ${identityCol} = ? AND puzzle_date = ?`
+  ).bind(identityVal, today).first()
 
   if (!attempt) {
     const nowSeconds = Math.floor(Date.now() / 1000)
-    const { data: newAttempt } = await supabase.from('attempts').insert({
-      user_id: userId ?? null,
-      guest_id: guestId ?? null,
-      display_name: displayName,
-      puzzle_id: puzzle.id,
-      puzzle_date: today,
-      created_at: nowSeconds,
-      modified_at: nowSeconds
-    }).select().single()
-    attempt = newAttempt
+    await db.prepare(
+      `INSERT INTO attempts (user_id, guest_id, display_name, puzzle_id, puzzle_date, created_at, modified_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(userId ?? null, guestId ?? null, displayName, puzzle.id, today, nowSeconds, nowSeconds).run()
+
+    attempt = await db.prepare(
+      `SELECT * FROM attempts WHERE ${identityCol} = ? AND puzzle_date = ?`
+    ).bind(identityVal, today).first()
   }
 
   if (attempt?.status === 'completed') {
-    const elapsedSeconds = attempt.completed_at - attempt.created_at
+    const elapsedSeconds = (attempt.completed_at as number) - (attempt.created_at as number)
     const shareText = buildShareText({
       puzzleNumber: puzzle.id,
       guesses: attempt.guesses,
@@ -100,11 +100,11 @@ fibFinderApp.get('/', async (c) => {
       <Layout title="Fib Finder" user={user}>
         <h1 className="text-3xl font-bold">Fib Finder</h1>
         <p>Solved! The fib was:</p>
-        <blockquote className="p-4 bg-gray-200 rounded my-2">{statements[puzzle.fib_index]}</blockquote>
+        <blockquote className="p-4 bg-gray-200 rounded my-2">{statements[puzzle.fib_index as number]}</blockquote>
         <p className="italic">{puzzle.fib_explanation}</p>
         <p className="mt-4">{attempt.guesses} guesses · {elapsedSeconds}s · {attempt.score} pts</p>
         <textarea readOnly rows={5} className="w-full p-2 border">{shareText}</textarea>
-        <button 
+        <button
           className="mt-2 bg-blue-500 text-white p-2 rounded"
           onclick={`navigator.clipboard.writeText(${JSON.stringify(shareText)}); this.textContent = 'Copied!'`}
         >
@@ -119,7 +119,7 @@ fibFinderApp.get('/', async (c) => {
     <Layout title="Fib Finder" user={user}>
       <h1 className="text-3xl font-bold">Fib Finder</h1>
       <p>{puzzle.category} — find the fib.</p>
-      {attempt?.guesses > 0 && <p>{attempt.guesses} wrong guess{attempt.guesses === 1 ? '' : 'es'} so far — try again.</p>}
+      {(attempt?.guesses as number) > 0 && <p>{attempt?.guesses} wrong guess{attempt?.guesses === 1 ? '' : 'es'} so far — try again.</p>}
       <div className="flex flex-col gap-2 mt-4">
         {statements.map((text: string, i: number) => (
           <form method="post" action={`/fibfinder/${puzzle.id}/${today}/guess/${i}`} key={i}>
@@ -137,36 +137,33 @@ fibFinderApp.post('/:id/:date/guess/:index', async (c) => {
   const puzzleId = c.req.param('id')
   const puzzleDate = c.req.param('date')
   const guessIndex = Number(c.req.param('index'))
-  const supabase = getSupabase(c.env)
-  
-  const { data: puzzle } = await supabase.from('puzzles').select('*').eq('id', puzzleId).single()
+  const db = c.env.FIBFINDER_DB
+
+  const puzzle = await db.prepare(`SELECT * FROM puzzles WHERE id = ?`).bind(puzzleId).first()
   const { userId, guestId, displayName } = getIdentity(c)
-  
+
   const identityCol = userId ? 'user_id' : 'guest_id'
   const identityVal = userId ? userId : guestId
-  let { data: attempt } = await supabase.from('attempts').select('*').eq(identityCol, identityVal).eq('puzzle_date', puzzleDate).single()
+  const attempt = await db.prepare(
+    `SELECT * FROM attempts WHERE ${identityCol} = ? AND puzzle_date = ?`
+  ).bind(identityVal, puzzleDate).first()
 
   if (attempt?.status === 'completed') return c.redirect('/fibfinder', 303)
 
   const correct = isCorrectGuess(puzzle, guessIndex)
-  const guessesSoFar = (attempt?.guesses || 0) + 1
+  const guessesSoFar = ((attempt?.guesses as number) || 0) + 1
   const nowSeconds = Math.floor(Date.now() / 1000)
 
   if (correct) {
-    const elapsedSeconds = nowSeconds - (attempt?.created_at || nowSeconds)
+    const elapsedSeconds = nowSeconds - ((attempt?.created_at as number) || nowSeconds)
     const score = calculateScore(guessesSoFar, elapsedSeconds)
-    await supabase.from('attempts').update({
-      guesses: guessesSoFar,
-      status: 'completed',
-      score: score,
-      completed_at: nowSeconds,
-      modified_at: nowSeconds
-    }).eq('id', attempt.id)
+    await db.prepare(
+      `UPDATE attempts SET guesses = ?, status = 'completed', score = ?, completed_at = ?, modified_at = ? WHERE id = ?`
+    ).bind(guessesSoFar, score, nowSeconds, nowSeconds, attempt?.id).run()
   } else {
-    await supabase.from('attempts').update({
-      guesses: guessesSoFar,
-      modified_at: nowSeconds
-    }).eq('id', attempt.id)
+    await db.prepare(
+      `UPDATE attempts SET guesses = ?, modified_at = ? WHERE id = ?`
+    ).bind(guessesSoFar, nowSeconds, attempt?.id).run()
   }
 
   return c.redirect('/fibfinder', 303)

@@ -3,5 +3,19 @@ main = "index.tsx"
 compatibility_date = "2024-08-25"
 
 [vars]
-SUPABASE_URL = "https://kqmccabpmaoqnihjnaya.supabase.co"
 SITE_URL = "https://sencho.twag117.workers.dev"
+
+[[d1_databases]]
+binding = "USERS_DB"
+database_name = "sencho-users"
+database_id = "794c97c4-d29f-4e16-9db7-80c74551f525"
+
+[[d1_databases]]
+binding = "FIBFINDER_DB"
+database_name = "sencho-fibfinder"
+database_id = "f4c3f8be-fdde-4851-a74e-a743cd84a764"
+
+[[d1_databases]]
+binding = "FLASHESPANOL_DB"
+database_name = "sencho-flashespanol"
+database_id = "8db5439f-d0e2-4027-acbe-af62c63fe606"

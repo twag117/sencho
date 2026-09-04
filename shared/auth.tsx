@@ -1,20 +1,19 @@
-/** @jsxImportSource hono/jsx */
 import { Hono } from 'hono'
 import { setCookie } from 'hono/cookie'
 import { Layout } from '../shared/layout'
-import { loginWithMagicLink, logout } from './authHelpers'
+import { sendLoginCode, verifyLoginCode, logout } from '../shared/authHelpers'
 
 export const authApp = new Hono()
 
 authApp.get('/login', (c) => {
   return c.html(
-    <Layout title="Login">
-      <h1 className="text-3xl font-bold">Login</h1>
-      <p>Enter your email to receive a magic login link.</p>
-      <form action="/auth/login" method="post" className="mt-4 flex flex-col gap-2 max-w-sm">
+    <Layout title="Login" user={c.get('user')}>
+      <h1>Login</h1>
+      <p>Enter your email to receive a login code.</p>
+      <form action="/auth/login" method="post" style="display: flex; flex-direction: column; gap: 0.5rem; max-width: 300px;">
         <label htmlFor="u_email"><strong>Email</strong></label>
-        <input type="email" name="u_email" placeholder="Enter Email" required className="p-2 border rounded" />
-        <button type="submit" className="bg-blue-500 text-white p-2 rounded">Send Magic Link</button>
+        <input type="email" name="u_email" placeholder="Enter Email" required style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px;" />
+        <button type="submit" style="background: #0172ad; color: white; padding: 0.6rem; border-radius: 6px; border: none;">Send Code</button>
       </form>
     </Layout>
   )
@@ -24,53 +23,45 @@ authApp.post('/login', async (c) => {
   const body = await c.req.parseBody()
   const email = String(body.u_email)
 
-  const success = await loginWithMagicLink(email, c.env)
+  const success = await sendLoginCode(email, c.env)
   if (!success) {
     return c.redirect('/auth/login?error=1')
   }
 
   return c.html(
-    <Layout title="Check your email">
-      <h1 className="text-3xl font-bold">Check your email</h1>
-      <p>We've sent a magic link to <strong>{email}</strong>. Click it to log in!</p>
-      <a href="/" className="text-blue-500 underline">Back to Home</a>
+    <Layout title="Enter code" user={c.get('user')}>
+      <h1>Enter your code</h1>
+      <p>We've sent a 6-digit code to <strong>{email}</strong>.</p>
+      <form action="/auth/verify" method="post" style="display: flex; flex-direction: column; gap: 0.5rem; max-width: 300px;">
+        <input type="hidden" name="email" value={email} />
+        <label htmlFor="code"><strong>Code</strong></label>
+        <input type="text" name="code" placeholder="123456" required maxLength={6} style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; letter-spacing: 4px; font-size: 1.2rem; text-align: center;" />
+        <button type="submit" style="background: #0172ad; color: white; padding: 0.6rem; border-radius: 6px; border: none;">Verify</button>
+      </form>
     </Layout>
   )
 })
 
-authApp.get('/callback', (c) => {
-  return c.html(
-    <html>
-      <body>
-        <p>Logging you in...</p>
-        <script dangerouslySetInnerHTML={{ __html: `
-          const hash = window.location.hash.substring(1)
-          const params = new URLSearchParams(hash)
-          const access_token = params.get('access_token')
-          const refresh_token = params.get('refresh_token')
+authApp.post('/verify', async (c) => {
+  const body = await c.req.parseBody()
+  const email = String(body.email)
+  const code = String(body.code)
 
-          if (access_token) {
-            fetch('/auth/session', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ access_token, refresh_token })
-            }).then(() => {
-              window.location.href = '/'
-            })
-          } else {
-            window.location.href = '/auth/login?error=1'
-          }
-        `}} />
-      </body>
-    </html>
-  )
-})
+  const result = await verifyLoginCode(email, code, c.env)
+  if (!result) {
+    return c.html(
+      <Layout title="Invalid code" user={c.get('user')}>
+        <h1>Invalid or expired code</h1>
+        <p><a href="/auth/login">Try again</a></p>
+      </Layout>
+    )
+  }
 
-authApp.post('/session', async (c) => {
-  const { access_token, refresh_token } = await c.req.json()
-  setCookie(c, 'sb-access-token', access_token, { path: '/', httpOnly: true, secure: true, sameSite: 'Lax', maxAge: 60 * 60 * 24 * 7 })
-  setCookie(c, 'sb-refresh-token', refresh_token, { path: '/', httpOnly: true, secure: true, sameSite: 'Lax', maxAge: 60 * 60 * 24 * 30 })
-  return c.json({ ok: true })
+  setCookie(c, 'sencho_session', result.sessionToken, {
+    path: '/', httpOnly: true, secure: true, sameSite: 'Lax', maxAge: 60 * 60 * 24 * 30,
+  })
+
+  return c.redirect('/')
 })
 
 authApp.get('/logout', async (c) => {

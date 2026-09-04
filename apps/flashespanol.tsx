@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { Layout } from '../shared/layout'
-import { getSupabase } from '../shared/supabase'
 
 export const flashEspanolApp = new Hono()
 
@@ -37,8 +36,8 @@ const WordPage = ({ word, user }: { word: any; user: any }) => (
         src={word.image_url || "https://placehold.co/400x300?text=No+image"}
         alt={word.es}
       />
-      <a 
-        href={word.id === 500 ? "/flashespanol/words/1" : `/flashespanol/words/${word.id + 1}`} 
+      <a
+        href={word.id === 500 ? "/flashespanol/words/1" : `/flashespanol/words/${word.id + 1}`}
         style="display: block; text-align: center; background: #0172ad; color: white; padding: 0.6rem 2rem; border-radius: 6px; text-decoration: none;"
       >
         Next
@@ -58,16 +57,16 @@ const WordPage = ({ word, user }: { word: any; user: any }) => (
 flashEspanolApp.get('/', (c) => c.html(<HomePage user={c.get('user')} />))
 
 flashEspanolApp.get('/words', async (c) => {
-  const supabase = getSupabase(c.env)
-  const { data: words } = await supabase.from('words').select('*').limit(1000)
-  return c.html(<WordsPage words={words || []} user={c.get('user')} />)
+  const db = c.env.FLASHESPANOL_DB
+  const { results } = await db.prepare(`SELECT * FROM words LIMIT 1000`).all()
+  return c.html(<WordsPage words={results || []} user={c.get('user')} />)
 })
 
 flashEspanolApp.get('/words/:id', async (c) => {
   const id = c.req.param('id')
-  const supabase = getSupabase(c.env)
-  const { data: word } = await supabase.from('words').select('*').eq('id', id).single()
-  
+  const db = c.env.FLASHESPANOL_DB
+  const word = await db.prepare(`SELECT * FROM words WHERE id = ?`).bind(id).first()
+
   if (word) {
     return c.html(<WordPage word={word} user={c.get('user')} />)
   } else {
@@ -81,9 +80,9 @@ flashEspanolApp.post('/words/:id/image', async (c) => {
 
   const id = c.req.param('id')
   const body = await c.req.parseBody()
-  const supabase = getSupabase(c.env)
-  
-  await supabase.from('words').update({ image_url: body.image_url }).eq('id', id)
-  
+  const db = c.env.FLASHESPANOL_DB
+
+  await db.prepare(`UPDATE words SET image_url = ? WHERE id = ?`).bind(body.image_url, id).run()
+
   return c.redirect(`/flashespanol/words/${id}`, 303)
 })
