@@ -6,15 +6,18 @@ export const flashEspanolApp = new Hono()
 // --- PAGES ---
 
 const HomePage = ({ user }: { user: any }) => (
-  <Layout title="Home" user={user}>
-    <h1 className="text-3xl font-bold">Welcome to Flash Español!</h1>
+  <Layout title="Flash Español" user={user}>
+    <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">Welcome to Flash Español!</h1>
     <p>Click the button below to get started :)</p>
-    <a href="/flashespanol/words/1" className="mt-4 inline-block bg-blue-500 text-white p-2 rounded">Start</a>
+    <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem; max-width: 250px;">
+      <a href="/flashespanol/words/1" style="display: block; text-align: center; background: #0172ad; color: white; padding: 0.6rem; border-radius: 6px; text-decoration: none;">Start</a>
+      <a href="/flashespanol/words" style="display: block; text-align: center; border: 1px solid #ddd; padding: 0.6rem; border-radius: 6px; text-decoration: none; color: inherit;">View all words</a>
+    </div>
   </Layout>
 )
 
 const WordsPage = ({ words, user }: { words: any[]; user: any }) => (
-  <Layout title="Words" user={user}>
+  <Layout title="Flash Español - Words" user={user}>
     <h1 className="text-3xl font-bold">All Words</h1>
     <ul className="mt-4 space-y-1">
       {words.map((word) => (
@@ -27,8 +30,12 @@ const WordsPage = ({ words, user }: { words: any[]; user: any }) => (
 )
 
 const WordPage = ({ word, user }: { word: any; user: any }) => (
-  <Layout title={word.es} user={user}>
+  <Layout title={`Flash Español - ${word.es}`} user={user}>
     <div className="word-card">
+      <div style="margin-bottom: 1rem;">
+        <a href="/flashespanol" style="color: #0172ad; margin-right: 1rem;">← Flash Español Home</a>
+        <a href="/flashespanol/words" style="color: #0172ad;">All words</a>
+      </div>
       <h1 style="font-size: 2.5rem; font-weight: 600;">{word.es}</h1>
       <p style="color: var(--muted-color); font-style: italic;">{word.pronunciation}</p>
       <img
@@ -44,7 +51,7 @@ const WordPage = ({ word, user }: { word: any; user: any }) => (
       </a>
       {user && (
         <form action={`/flashespanol/words/${word.id}/image`} method="post" className="form-container" style="border-top: 1px solid #ddd; padding-top: 1rem; width: 100%;">
-          <input type="text" name="image_url" placeholder="Image URL" style="flex: 1; padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px;" />
+          <input type="text" name="image_url" placeholder="Image URL" style="flex: 1 1 auto; width: 100%; min-width: 0; padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;" />
           <button type="submit" style="background: #333; color: white; padding: 0.6rem 1rem; border-radius: 6px; border: none;">Submit</button>
         </form>
       )}
